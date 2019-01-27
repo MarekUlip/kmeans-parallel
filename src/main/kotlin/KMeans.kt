@@ -1,5 +1,4 @@
 import kotlin.random.Random
-import kotlinx.coroutines.*
 
 class KMeans(val points: List<Point>, val k: Int, val dimension: Int, val minChange: Double, val numOfThreads: Int) {
     fun euklideanDistance(a:Point, b:Point):Double{
@@ -36,25 +35,8 @@ class KMeans(val points: List<Point>, val k: Int, val dimension: Int, val minCha
         return newCentroid
     }
 
-    fun createNewCentroids(clusters: MutableList<MutableList<Point>>):MutableList<Point>{
-        val centroids = mutableListOf<Point>()
-        val coroutines = mutableListOf<Job>()
-        runBlocking {
-            for (cluster in clusters){
-                coroutines.add(async {
-                    val newCentroid = countNewCentroidForCluster(cluster)
-                    synchronized(centroids){
-                        centroids.add(newCentroid)
-                    }
-                    })
-            }
-            for (coroutine in coroutines){
-                coroutine.join()
-            }
-        }
-        return centroids
-    }
-    fun createNewCentroidsThread(clusters: MutableList<MutableList<Point>>):MutableList<Point>{
+
+    fun createNewCentroidsParallel(clusters: MutableList<MutableList<Point>>):MutableList<Point>{
         val centroids = mutableListOf<Point>()
         val threads = mutableListOf<Thread>()
         val chunkSize = (k / numOfThreads).toInt()
@@ -94,19 +76,6 @@ class KMeans(val points: List<Point>, val k: Int, val dimension: Int, val minCha
         return centroids
     }
 
-    fun countNewCentroidForClusterSerial(cluster: MutableList<Point>):Point{
-        var newCentroid = Point(MutableList(dimension){0.0}, dimension)
-        for (point in cluster){
-            for (i in 0 until dimension){
-                newCentroid.point[i] += point.point[i]
-            }
-        }
-        for (i in 0 until dimension){
-            newCentroid.point[i] = newCentroid.point[i] / cluster.size
-        }
-        return newCentroid
-    }
-
     fun createNewCentroidsSerial(clusters: MutableList<MutableList<Point>>):MutableList<Point>{
         val centroids = mutableListOf<Point>()
         for (cluster in clusters){
@@ -115,26 +84,9 @@ class KMeans(val points: List<Point>, val k: Int, val dimension: Int, val minCha
         return centroids
     }
 
-    fun initializeClusters(points: List<Point>,centroids: MutableList<Point>): MutableList<MutableList<Point>>{
-        val clusters = MutableList(centroids.size){ mutableListOf<Point>()}
-        val coroutines = mutableListOf<Job>()
-        runBlocking {
-            for (point in points) {
-                coroutines.add(async {
-                    val centroidIndex = getClosestCentroidIndex(centroids, point)
-                    //synchronized(clusters[centroidIndex]){
-                        clusters[centroidIndex].add(point)
-                    //}
-                })
-            }
-            for (thread in coroutines) {
-                thread.join()
-            }
-        }
-        return clusters
-    }
 
-    fun initializeClustersThread(points: List<Point>,centroids: MutableList<Point>): MutableList<MutableList<Point>>{
+
+    fun initializeClustersParallel(points: List<Point>, centroids: MutableList<Point>): MutableList<MutableList<Point>>{
         val clustersRes = MutableList(centroids.size){ mutableListOf<Point>()}
         val threads = mutableListOf<Thread>()
         val chunkSize = points.size/numOfThreads
@@ -186,8 +138,7 @@ class KMeans(val points: List<Point>, val k: Int, val dimension: Int, val minCha
     }
 
 
-
-    fun doKmeans(): MutableList<MutableList<Point>>{
+    fun doKmeansParallel(): MutableList<MutableList<Point>>{
         var centroids = mutableListOf<Point>()
         val occured = mutableListOf<Int>()
         for (i in 0 until k){
@@ -198,33 +149,12 @@ class KMeans(val points: List<Point>, val k: Int, val dimension: Int, val minCha
             occured.add(randNum)
             centroids.add(points[randNum])
         }
-        var clusters = initializeClusters(points,centroids)
-        var newCentroids = createNewCentroids(clusters)
+        var clusters = initializeClustersParallel(points,centroids)
+        var newCentroids = createNewCentroidsParallel(clusters)
         while (checkCentroidChange(centroids,newCentroids)){
             centroids = newCentroids
-            clusters = initializeClusters(points,centroids)
-            newCentroids = createNewCentroids(clusters)
-        }
-        return clusters
-    }
-
-    fun doKmeansThreads(): MutableList<MutableList<Point>>{
-        var centroids = mutableListOf<Point>()
-        val occured = mutableListOf<Int>()
-        for (i in 0 until k){
-            var randNum = Random.nextInt(points.size)
-            while (occured.contains(randNum)){
-                randNum = Random.nextInt(points.size)
-            }
-            occured.add(randNum)
-            centroids.add(points[randNum])
-        }
-        var clusters = initializeClustersThread(points,centroids)
-        var newCentroids = createNewCentroidsThread(clusters)
-        while (checkCentroidChange(centroids,newCentroids)){
-            centroids = newCentroids
-            clusters = initializeClustersThread(points,centroids)
-            newCentroids = createNewCentroidsThread(clusters)
+            clusters = initializeClustersParallel(points,centroids)
+            newCentroids = createNewCentroidsParallel(clusters)
         }
         return clusters
     }

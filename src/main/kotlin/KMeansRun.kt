@@ -28,7 +28,7 @@ fun main(args : Array<String>) {
         clusters = kMeans.doKmeansSerial()
         avgSerial += (System.currentTimeMillis() - start)
         start = System.currentTimeMillis()
-        clusters = kMeans.doKmeansThreads()
+        clusters = kMeans.doKmeansParallel()
         avgThreads += (System.currentTimeMillis() - start)
         println(i)
     }
