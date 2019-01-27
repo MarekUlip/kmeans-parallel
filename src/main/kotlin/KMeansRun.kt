@@ -20,7 +20,7 @@ fun main(args : Array<String>) {
     }*/
     var avgSerial = 0L
     var avgThreads = 0L
-    var numOfRepeat = 2
+    val numOfRepeat = 10
     println("Point count "+kMeans.points.size)
     var clusters = mutableListOf<MutableList<Point>>()
     for (i in 0 until numOfRepeat){
@@ -37,6 +37,7 @@ fun main(args : Array<String>) {
     println("Serial in: $avgSerial\nThreads in: $avgThreads")
     for(cluster in clusters){
         println("Cluster: "+cluster.size)
+        //Uncomment to see points from cluster
         /*for(point in cluster){
             println("Point: "+point.toString())
         }*/
@@ -47,11 +48,8 @@ fun loadCSV(dimension: Int):MutableList<Point>{
     var fileReader: BufferedReader? = null
     val points = mutableListOf<Point>()
     try {
-
         var line: String?
-
         fileReader = BufferedReader(FileReader("fakeDataBig.csv"))
-        // Read the file line by line starting from the second line
         line = fileReader.readLine()
         while (line != null) {
             val tokens = line.split(";")
